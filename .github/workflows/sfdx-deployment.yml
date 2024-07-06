@@ -52,7 +52,7 @@ jobs:
           mkdir delta
           sfdx sgd:source:delta --from $prevCommitId --output delta/ --generate-delta
 
-          $destructivePath = "delta/destructiveChanges/destructiveChanges.xml" 
+          $destructivePath = "delta/destructiveChanges.xml" 
           $destructiveChanges = Get-Content $destructivePath
 
           $destructiveChangesCheck = $destructiveChanges | Out-String
@@ -64,7 +64,7 @@ jobs:
               echo "::set-output name=isDestructive::False"
           }
 
-          $sourcePath = "delta/package/package.xml"
+          $sourcePath = "delta/package.xml"
           $destinationPath = "delta/src" 
           if (Test-Path -Path $destinationPath) { 
               Write-Host "Moving.."
