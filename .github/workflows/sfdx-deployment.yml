@@ -23,11 +23,10 @@ jobs:
       COMMIT_ID: ${{ github.event.inputs.CommitID || 'default_commit_id' }}
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v2
         with:
-          clean: true
-          persist-credentials: true
+          fetch-depth: 2
 
       - name: Install SFDX CLI
         run: |
