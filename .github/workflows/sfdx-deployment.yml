@@ -41,34 +41,51 @@ jobs:
         run: |
           $prevCommitId = ""
 
-          if ("${{ env.COMMIT_ID }}" -ne " " -or "") { 
+          # Validate COMMIT_ID environment variable
+          if ("${{ env.COMMIT_ID }}" -ne " " -and "${{ env.COMMIT_ID }}" -ne "") { 
               $prevCommitId = "${{ env.COMMIT_ID }}".Trim()
           } else {
-              $prevCommitId = $(git rev-parse HEAD^)  
+              $prevCommitId = $(git rev-parse HEAD~1)  # Use the previous commit
           }
 
           Write-Host "Previous Commit ID : $prevCommitId"
 
           mkdir delta
+          Write-Host "Generating delta..."
           sfdx sgd:source:delta --from $prevCommitId --output delta/ --generate-delta
+          Write-Host "Delta generation completed."
 
-          $destructivePath = "delta/destructiveChanges/destructiveChanges.xml" 
-          $destructiveChanges = Get-Content $destructivePath
+      - name: List delta directory contents
+        run: |
+          echo "Listing contents of delta directory:"
+          ls -R delta
 
-          $destructiveChangesCheck = $destructiveChanges | Out-String
-          if (($destructiveChangesCheck.Contains("<members>")) -and ($destructiveChangesCheck.Contains("<types>"))) {
-              Write-Host "Destructive Changes found"
-              echo "::set-output name=isDestructive::True"
+      - name: Verify and Read Destructive Changes
+        shell: pwsh
+        run: |
+          $destructivePath = "delta/destructiveChanges/destructiveChanges.xml"
+          
+          if (Test-Path $destructivePath) {
+              $destructiveChanges = Get-Content $destructivePath
+              Write-Host "Destructive Changes:"
+              Write-Host $destructiveChanges
           } else {
-              Write-Host "No Destructive Changes found"
-              echo "::set-output name=isDestructive::False"
+              Write-Host "destructiveChanges.xml file does not exist at the specified path."
+              exit 1
           }
 
-          $sourcePath = "delta/package/package.xml"
-          $destinationPath = "delta/src" 
-          if (Test-Path -Path $destinationPath) { 
-              Write-Host "Moving.."
-              Move-Item -path $sourcePath -destination $destinationPath
+      - name: Verify and Read Package XML
+        shell: pwsh
+        run: |
+          $packagePath = "delta/package/package.xml"
+          
+          if (Test-Path $packagePath) {
+              $packageContents = Get-Content $packagePath
+              Write-Host "Package XML Contents:"
+              Write-Host $packageContents
+          } else {
+              Write-Host "package.xml file does not exist at the specified path."
+              exit 1
           }
 
       - name: Salesforce PWD Scanner (Code Analyzer)
