@@ -69,6 +69,7 @@ jobs:
           if (Test-Path -Path $destinationPath) { 
               Write-Host "Moving.."
               Move-Item -path $sourcePath -destination $destinationPath
+          }
 
       - name: Salesforce PWD Scanner (Code Analyzer)
         run: |
