@@ -32,9 +32,11 @@ jobs:
       - name: Install SFDX CLI
         run: |
           echo 'Installing sfdx cli'
-          npm install @salesforce/cli --global
-          echo 'Installing sfdx git delta'
-          echo y | sfdx plugins:install sfdx-git-delta
+          npm install @salesforce/cli --global --unsafe-perm
+      
+      - name: Install Salesforce Git Delta Plugin
+        run: echo y | sfdx plugins:install sfdx-git-delta
+
 
       - name: Generate SFDX Git Delta
         shell: pwsh
@@ -52,7 +54,7 @@ jobs:
           mkdir delta
           sfdx sgd:source:delta --from $prevCommitId --output delta/ --generate-delta
 
-          $destructivePath = "delta/destructiveChanges.xml" 
+          $destructivePath = "delta/destructiveChanges/destructiveChanges.xml" 
           $destructiveChanges = Get-Content $destructivePath
 
           $destructiveChangesCheck = $destructiveChanges | Out-String
@@ -64,7 +66,7 @@ jobs:
               echo "::set-output name=isDestructive::False"
           }
 
-          $sourcePath = "delta/package.xml"
+          $sourcePath = "delta/package/package.xml"
           $destinationPath = "delta/src" 
           if (Test-Path -Path $destinationPath) { 
               Write-Host "Moving.."
@@ -90,3 +92,59 @@ jobs:
             sf org login jwt --client-id ${{ secrets.SFDX_CONSUMERKEY}} --jwt-key-file Assets/server.key --username ${{ secrets.SFDX_USERNAME }} --instance-url https://login.salesforce.com
             echo "sfusername=${{ secrets.SFDX_USERNAME }}" >> $GITHUB_ENV
           fi
+        
+       - name: Validating Using SFDX CLI
+         if: ${{ success() && github.event.pull_request.base.ref != '' }}
+         shell: pwsh
+         run: |
+          $SFORGUSERNAME = "${{ env.sfusername }}"
+          $TstClassType = "${{ steps.deltaChanges.outputs.TestType }}"
+          Write-Host "Validation on $SFORGUSERNAME..."
+          $isDestructiveFound = "${{ steps.deltaChanges.outputs.isDestructive }}"
+          $srcFolder = "delta/src"
+          if ($isDestructiveFound -eq "True") {
+            Write-Host "Validating Destructive changes"
+            if (!(Test-Path -Path $srcFolder)) {
+              $sfCommand = "sf project deploy start --pre-destructive-changes delta/destructiveChanges/destructiveChanges.xml --manifest delta/package/package.xml -o $SFORGUSERNAME $TstClassType -w 1000"
+              Write-Host "Only Deletion -> $sfCommand"
+              Invoke-Expression $sfCommand
+            } else {
+              $sfCommand = "sf project deploy start --pre-destructive-changes delta/destructiveChanges/destructiveChanges.xml --manifest delta/src/package.xml -o $SFORGUSERNAME $TstClassType -w 1000"
+              Write-Host "Deletion and Modification -> $sfCommand"
+              Invoke-Expression $sfCommand
+            }
+          } else {
+            if (Test-Path -Path $srcFolder) {  
+              $sfCommand = "sf project deploy start --source-dir delta/src/. -o $SFORGUSERNAME $TstClassType -w 1000"
+              Write-Host "Validating changes -> $sfCommand"
+              Invoke-Expression $sfCommand
+            } else {
+              Write-Host "No Code found for deployment.."
+            }
+          }
+       - name: Deployment Using SFDX CLI
+         if: ${{ success() && github.event.pull_request.base.ref == '' }}
+         shell: pwsh
+         run: |
+          $SFORGUSERNAME = "${{ env.sfusername }}"
+          Write-Host "Deploying on $SFORGUSERNAME..."
+          $isDestructiveFound = "${{ steps.deltaChanges.outputs.isDestructive }}"
+          $srcFolder = "delta/src"
+          if ($isDestructiveFound -eq "True") {
+            Write-Host "Deploying Destructive changes"
+            if (!(Test-Path -Path $srcFolder)) {
+              Write-Host "Only Deletion"
+              sf project deploy start --pre-destructive-changes delta/destructiveChanges/destructiveChanges.xml --manifest delta/package/package.xml -o $SFORGUSERNAME -w 1000
+            } else {
+              Write-Host "Deletion and Modification"
+              sf project deploy start --pre-destructive-changes delta/destructiveChanges/destructiveChanges.xml --manifest delta/src/package.xml -o $SFORGUSERNAME -w 1000
+            }
+          } else {
+            if (Test-Path -Path $srcFolder) {
+              Write-Host "Deploying changes"
+              sf project deploy start --source-dir delta/src/. -o $SFORGUSERNAME -w 1000
+            } else {
+              Write-Host "No Code found for deployment.."
+            }
+          }
+
