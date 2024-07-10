@@ -56,7 +56,7 @@ jobs:
       - name: Verify and Read Destructive Changes
         shell: pwsh
         run: |
-          $destructivePath = "delta/destructiveChanges.xml"
+          $destructivePath = "delta/destructiveChanges/destructiveChanges.xml"
           
           if (Test-Path $destructivePath) {
               $destructiveChanges = Get-Content $destructivePath
