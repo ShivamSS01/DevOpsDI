@@ -9,6 +9,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
+        with:
+          fetch-depth: 2  # Fetch the last two commits
 
       - name: Set up Node.js
         uses: actions/setup-node@v2
@@ -26,10 +28,11 @@ jobs:
         run: |
           $prevCommitId = ""
 
-          if ("${{ env.COMMIT_ID }}" -ne " " -or "") { 
+          # Validate COMMIT_ID environment variable
+          if ("${{ env.COMMIT_ID }}" -ne " " -and "${{ env.COMMIT_ID }}" -ne "") { 
               $prevCommitId = "${{ env.COMMIT_ID }}".Trim()
           } else {
-              $prevCommitId = $(git rev-parse HEAD^)  
+              $prevCommitId = $(git rev-parse HEAD~1)  # Use the previous commit
           }
 
           Write-Host "Previous Commit ID : $prevCommitId"
