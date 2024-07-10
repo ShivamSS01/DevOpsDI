@@ -70,7 +70,7 @@ jobs:
       - name: Verify and Read Package XML
         shell: pwsh
         run: |
-          $packagePath = "delta/package.xml"
+          $packagePath = "delta/package/package.xml"
           
           if (Test-Path $packagePath) {
               $packageContents = Get-Content $packagePath
