@@ -36,7 +36,6 @@ jobs:
       - name: Install Salesforce Git Delta Plugin
         run: echo y | sfdx plugins:install sfdx-git-delta
 
-
       - name: Generate SFDX Git Delta
         shell: pwsh
         run: |
@@ -70,7 +69,6 @@ jobs:
           if (Test-Path -Path $destinationPath) { 
               Write-Host "Moving.."
               Move-Item -path $sourcePath -destination $destinationPath
-          }
 
       - name: Salesforce PWD Scanner (Code Analyzer)
         run: |
@@ -92,10 +90,10 @@ jobs:
             echo "sfusername=${{ secrets.SFDX_USERNAME }}" >> $GITHUB_ENV
           fi
         
-       - name: Validating Using SFDX CLI
-         if: ${{ success() && github.event.pull_request.base.ref != '' }}
-         shell: pwsh
-         run: |
+      - name: Validating Using SFDX CLI
+        if: ${{ success() && github.event.pull_request.base.ref != '' }}
+        shell: pwsh
+        run: |
           $SFORGUSERNAME = "${{ env.sfusername }}"
           $TstClassType = "${{ steps.deltaChanges.outputs.TestType }}"
           Write-Host "Validation on $SFORGUSERNAME..."
@@ -120,11 +118,11 @@ jobs:
             } else {
               Write-Host "No Code found for deployment.."
             }
-          }
-       - name: Deployment Using SFDX CLI
-         if: ${{ success() && github.event.pull_request.base.ref == '' }}
-         shell: pwsh
-         run: |
+
+      - name: Deployment Using SFDX CLI
+        if: ${{ success() && github.event.pull_request.base.ref == '' }}
+        shell: pwsh
+        run: |
           $SFORGUSERNAME = "${{ env.sfusername }}"
           Write-Host "Deploying on $SFORGUSERNAME..."
           $isDestructiveFound = "${{ steps.deltaChanges.outputs.isDestructive }}"
@@ -145,5 +143,3 @@ jobs:
             } else {
               Write-Host "No Code found for deployment.."
             }
-          }
-
