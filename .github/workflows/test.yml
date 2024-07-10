@@ -18,10 +18,16 @@ jobs:
           node-version: '20'
 
       - name: Install SFDX CLI
-        run: npm install sfdx-cli --global
+        run: npm install sfdx-cli --global --unsafe-perm
+
+      - name: Verify SFDX CLI Installation
+        run: sfdx --version
 
       - name: Install Salesforce Git Delta Plugin
-        run: sfdx plugins:install sfdx-git-delta
+        run: echo y | sfdx plugins:install sfdx-git-delta
+
+      - name: Verify Salesforce Git Delta Plugin Installation
+        run: sfdx plugins --core
 
       - name: Generate SFDX Git Delta
         shell: pwsh
@@ -38,10 +44,14 @@ jobs:
           Write-Host "Previous Commit ID : $prevCommitId"
 
           mkdir delta
+          Write-Host "Generating delta..."
           sfdx sgd:source:delta --from $prevCommitId --output delta/ --generate-delta
+          Write-Host "Delta generation completed."
 
       - name: List delta directory contents
-        run: ls -R delta
+        run: |
+          echo "Listing contents of delta directory:"
+          ls -R delta
 
       - name: Verify and Read Destructive Changes
         shell: pwsh
